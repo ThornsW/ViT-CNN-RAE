@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Datasets (never commit raw data)
+data/
+caltech256/
+**/256_ObjectCategories/
+
+# Training outputs - regenerate via training
+netG_epoch_*.pth
+netR_epoch_*.pth
+netD_epoch_*.pth
+loss*.txt
+loss*.png
+*_1.png
+*_loss.png
+
+# save.py visualization outputs
+save_test/
+save_train/
+
+# Logs and runs
+logs/
+runs/
+*.log
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
