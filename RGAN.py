@@ -7,7 +7,6 @@ import torch.nn.functional as F
 import torchvision
 import os
 import matplotlib.pyplot as plt
-from skimage.segmentation import slic
 
 
 def draw(models_path, data, label):
