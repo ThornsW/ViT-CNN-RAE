@@ -9,6 +9,7 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+from tqdm import tqdm
 
 from .. import config
 from ..models import Discriminator, Generator, Recover
@@ -133,11 +134,14 @@ class Attack:
                 self._rebuild_optimizers(1e-5)
 
             sums = {k: 0.0 for k in self.loss_history}
-            for images, labels in train_dataloader:
+            pbar = tqdm(train_dataloader, desc=f"epoch {epoch}/{epochs}", leave=False)
+            for images, labels in pbar:
                 images, labels = images.to(self.device), labels.to(self.device)
                 losses = self.train_batch(images, labels)
                 for k, v in zip(self.loss_history, losses):
                     sums[k] += v
+                pbar.set_postfix(D=f"{losses[0]:.3f}", G=f"{losses[3]:.3f}",
+                                 perturb=f"{losses[2]:.1f}")
 
             n = len(train_dataloader)
             avgs = {k: sums[k] / n for k in self.loss_history}
