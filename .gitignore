@@ -5,22 +5,23 @@ __pycache__/
 *.pyd
 .Python
 *.egg-info/
+build/
+dist/
 
-# Datasets (never commit raw data)
-data/
+# Datasets (never commit raw images)
 caltech256/
 **/256_ObjectCategories/
 
-# Training outputs - regenerate via training
+# Training outputs (regenerate via training)
+outputs/
 netG_epoch_*.pth
 netR_epoch_*.pth
 netD_epoch_*.pth
 loss*.txt
 loss*.png
-*_1.png
 *_loss.png
 
-# save.py visualization outputs
+# Legacy save.py output dirs (left in case running old code)
 save_test/
 save_train/
 
@@ -37,3 +38,9 @@ runs/
 
 # Notebooks checkpoints
 .ipynb_checkpoints/
+
+# Claude Code project context (kept local)
+CLAUDE.md
+
+# 可视化理解
+可视化讲解/

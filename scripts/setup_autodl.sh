@@ -5,12 +5,10 @@
 
 set -euo pipefail
 
-echo "[1/3] Installing Python deps into base env..."
+echo "[1/3] Installing the vit_cnn_rae package (editable) + deps..."
 pip install -U pip
-pip install \
-    "torch>=2.0" "torchvision>=0.15" \
-    timm tqdm matplotlib pandas \
-    "scikit-image>=0.19" scikit-learn pillow
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+pip install -e "${REPO_DIR}"
 
 echo "[2/3] Preparing Caltech-256 dataset under ~/data/caltech256/..."
 DATA_DIR="${HOME}/data"
@@ -42,12 +40,14 @@ cat <<EOF
 ================================================================
 Setup complete. To start training:
 
-    cd <repo_dir>
+    cd ${REPO_DIR}
     export DATA_ROOT=${DATA_DIR}
-    python main1.py
+    python scripts/train_baseline.py             # SRAE baseline
+    python scripts/train_local.py --top-k 0.2    # attention-guided local
 
 To run evaluation after training:
 
-    python evaluate.py
+    python scripts/evaluate.py
+    python scripts/save_visualizations.py
 ================================================================
 EOF
