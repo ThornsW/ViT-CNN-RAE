@@ -1,7 +1,8 @@
 """Paths + run_id. Single source of truth for the project.
 
 Env overrides:
-    DATA_ROOT       — Caltech-256 root  (default: ~/data)
+    DATA_ROOT       — dataset root holding <dataset>/ images  (default: ~/data)
+    DATASET         — dataset name under data/splits/  (default: caltech256)
     CHECKPOINT_DIR  — target classifier weights (default: <repo>/checkpoints)
     OUTPUT_DIR      — training products (default: <repo>/outputs)
 """
@@ -14,7 +15,8 @@ from pathlib import Path
 PROJECT_ROOT: Path = Path(__file__).resolve().parents[2]
 
 DATA_ROOT: Path = Path(os.environ.get("DATA_ROOT", Path.home() / "data"))
-SPLITS_DIR: Path = PROJECT_ROOT / "data" / "splits"
+DATASET: str = os.environ.get("DATASET", "caltech256")
+SPLITS_DIR: Path = PROJECT_ROOT / "data" / "splits" / DATASET
 CHECKPOINT_DIR: Path = Path(os.environ.get("CHECKPOINT_DIR", PROJECT_ROOT / "checkpoints"))
 OUTPUT_DIR: Path = Path(os.environ.get("OUTPUT_DIR", PROJECT_ROOT / "outputs"))
 MODELS_OUT: Path = OUTPUT_DIR / "models"

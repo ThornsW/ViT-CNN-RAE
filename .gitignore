@@ -8,8 +8,7 @@ __pycache__/
 build/
 dist/
 
-# Datasets (never commit raw images)
-caltech256/
+# Datasets: ignore raw images only (data/splits/<dataset>/ stays tracked)
 **/256_ObjectCategories/
 
 # Training outputs (regenerate via training)

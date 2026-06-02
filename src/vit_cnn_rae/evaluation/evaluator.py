@@ -112,8 +112,9 @@ def evaluate(target_name: str = 'densenet121',
             'var': float(a.var()),
         }
 
-    config.LOGS_OUT.mkdir(parents=True, exist_ok=True)
-    with open(config.LOGS_OUT / 'test.txt', 'a', encoding='utf-8') as f:
+    results_dir = models_dir.parent
+    results_dir.mkdir(parents=True, exist_ok=True)
+    with open(results_dir / 'test.txt', 'a', encoding='utf-8') as f:
         f.write(repr(summary) + '\n')
 
     return summary
