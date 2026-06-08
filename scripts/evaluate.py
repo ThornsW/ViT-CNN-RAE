@@ -21,6 +21,10 @@ def parse_args():
     p.add_argument('--batch-size', type=int, default=32)
     p.add_argument('--models-dir', type=Path, default=None,
                    help='directory with the G and R checkpoints (default: outputs/models)')
+    p.add_argument('--local', action='store_true',
+                   help='evaluate a LocalAttack run (apply ViT top-k mask to G)')
+    p.add_argument('--top-k', type=float, default=0.2)
+    p.add_argument('--attn-model', default='vit_base_patch16_224')
     return p.parse_args()
 
 
@@ -30,7 +34,10 @@ def main():
              g_ckpt=args.g,
              r_ckpt=args.r,
              batch_size=args.batch_size,
-             models_dir=args.models_dir)
+             models_dir=args.models_dir,
+             local=args.local,
+             top_k_ratio=args.top_k,
+             attn_model=args.attn_model)
 
 
 if __name__ == '__main__':

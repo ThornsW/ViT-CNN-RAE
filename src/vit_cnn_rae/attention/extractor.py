@@ -1,6 +1,12 @@
 """ViTAttentionExtractor: wrap a timm ViT and expose the rolled-out attention."""
 from __future__ import annotations
 
+import os
+
+# 某些网络(含 AutoDL)在 HuggingFace 的 Xet 下载器上会 401/SSL 失败;
+# 在 timm 从 Hub 拉 ViT 权重前,强制回退到传统 HTTPS 下载路径,省去每次 export。
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+
 import timm
 import torch
 

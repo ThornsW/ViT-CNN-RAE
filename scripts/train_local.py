@@ -51,8 +51,11 @@ def main():
     loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True,
                         pin_memory=torch.cuda.is_available(), num_workers=1)
 
-    models_dir = config.run_dir(tag=f"local_topk{args.top_k}_s{args.seed}",
-                                model="srae_local") / "models"
+    if args.resume:
+        models_dir = args.resume.resolve().parent  # 续训:产物写回原 run 目录,不新建
+    else:
+        models_dir = config.run_dir(tag=f"local_topk{args.top_k}_s{args.seed}",
+                                    model="srae_local") / "models"
     print(f"output: {models_dir.parent}")
 
     attacker = LocalAttack(device, target, config.NUM_CLASSES, config.IMAGE_CHANNELS,

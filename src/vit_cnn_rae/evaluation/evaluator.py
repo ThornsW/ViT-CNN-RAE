@@ -25,14 +25,32 @@ def evaluate(target_name: str = 'densenet121',
              r_ckpt: str | Path = 'netR_epoch_150_1.pth',
              batch_size: int = 32,
              clip: float = 1.0,
-             models_dir: Path | None = None) -> dict:
-    """Load G/R/target, run val set, print and return metric summary."""
+             models_dir: Path | None = None,
+             local: bool = False,
+             top_k_ratio: float = 0.2,
+             attn_model: str = 'vit_base_patch16_224') -> dict:
+    """Load G/R/target, run val set, print and return metric summary.
+
+    local=True evaluates a LocalAttack run: G is wrapped in MaskedGenerator so the
+    perturbation is gated by the same ViT top-k attention mask used in training.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     models_dir = Path(models_dir) if models_dir else config.MODELS_OUT
 
     image_nc = config.IMAGE_CHANNELS
 
-    netG = Generator(image_nc, image_nc).to(device)
+    if local:
+        from ..attacks.local import MaskedGenerator
+        from ..attention import ViTAttentionExtractor, make_topk_mask, normalize_for_vit
+        _attn = ViTAttentionExtractor(model_name=attn_model, pretrained=True, device=device)
+
+        def _mask_fn(x):
+            att = _attn.get_attention_map(normalize_for_vit(x))
+            return make_topk_mask(att, top_k_ratio=top_k_ratio, out_size=x.shape[-1])
+
+        netG = MaskedGenerator(Generator(image_nc, image_nc), _mask_fn).to(device)
+    else:
+        netG = Generator(image_nc, image_nc).to(device)
     netG.load_state_dict(torch.load(models_dir / g_ckpt, map_location=device))
     netG.eval()
 
