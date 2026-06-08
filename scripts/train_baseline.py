@@ -51,6 +51,7 @@ def main():
 
     models_dir = config.run_dir(tag=f"baseline_s{args.seed}") / "models"
     print(f"output: {models_dir.parent}")
+    config.save_run_config(models_dir.parent, vars(args), model="srae")
 
     attacker = Attack(device, target, config.NUM_CLASSES, config.IMAGE_CHANNELS,
                       box_min=0, box_max=1, clip=1, models_path=models_dir)

@@ -59,6 +59,8 @@ def main():
         tag = f"local_topk{args.top_k}_bg{args.bg_weight}_s{args.seed}"
         models_dir = config.run_dir(tag=tag, model="srae_local") / "models"
     print(f"output: {models_dir.parent}")
+    if not args.resume:
+        config.save_run_config(models_dir.parent, vars(args), model="srae_local")
 
     attacker = LocalAttack(device, target, config.NUM_CLASSES, config.IMAGE_CHANNELS,
                            box_min=0, box_max=1, clip=1,

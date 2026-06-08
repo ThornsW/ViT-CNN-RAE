@@ -8,7 +8,10 @@ Env overrides:
 """
 from __future__ import annotations
 
+import json
 import os
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -45,3 +48,46 @@ def run_dir(tag: str, model: str = "srae") -> Path:
     d = OUTPUT_DIR / f"{ts}_{model}_{safe_tag}"
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+def _git_sha() -> str | None:
+    try:
+        out = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                             cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=5)
+        return out.stdout.strip() or None
+    except Exception:
+        return None
+
+
+def _jsonable(v):
+    if isinstance(v, (str, int, float, bool)) or v is None:
+        return v
+    return str(v)
+
+
+def save_run_config(run_dir: Path, params: dict, model: str = "") -> Path:
+    """Record a run's initial hyperparameters to <run_dir>/run_config.json.
+
+    Called once at training start so every run is self-describing: the argparse
+    params plus git commit, start time, dataset and library versions.
+    """
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    record = {
+        "run_dir": run_dir.name,
+        "model": model,
+        "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "git_commit": _git_sha(),
+        "dataset": DATASET,
+        "python": sys.version.split()[0],
+        "params": {k: _jsonable(v) for k, v in params.items()},
+    }
+    try:
+        import torch
+        record["torch"] = torch.__version__
+        record["cuda"] = bool(torch.cuda.is_available())
+    except Exception:
+        pass
+    f = run_dir / "run_config.json"
+    f.write_text(json.dumps(record, indent=2, ensure_ascii=False), encoding="utf-8")
+    return f
