@@ -20,5 +20,6 @@ setup(
     ],
     extras_require={
         "dev": ["pytest>=8.0"],
+        "report": ["flask"],
     },
 )

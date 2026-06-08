@@ -1,0 +1,3 @@
+{% macro fmt(x, p=2, suffix='') -%}
+{%- if x is none -%}<span class="na">—</span>{%- else -%}{{ '%.*f'|format(p, x) }}{{ suffix }}{%- endif -%}
+{%- endmacro %}

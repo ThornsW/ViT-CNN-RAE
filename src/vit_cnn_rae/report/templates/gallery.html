@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}图库 · ViT-CNN-RAE{% endblock %}
+{% block content %}
+<h1>图库 <span class="muted">(全局,不属于单个 run)</span></h1>
+
+<h2>注意力可视化 <span class="muted mono">outputs/attention_viz/</span></h2>
+{% if images.attention %}
+<div class="gallery">
+  {% for rel in images.attention %}
+  <a class="shot" href="{{ url_for('serve_file', path=rel) }}" target="_blank" rel="noopener">
+    <img src="{{ url_for('serve_file', path=rel) }}" loading="lazy" alt="{{ rel }}">
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty"><code>outputs/attention_viz/</code> 下没有 PNG。</p>
+{% endif %}
+
+<h2>样本可视化 <span class="muted mono">outputs/visualizations/save_test/</span></h2>
+{% if images.samples %}
+<div class="gallery">
+  {% for rel in images.samples %}
+  <a class="shot" href="{{ url_for('serve_file', path=rel) }}" target="_blank" rel="noopener">
+    <img src="{{ url_for('serve_file', path=rel) }}" loading="lazy" alt="{{ rel }}">
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">还没有样本图(ori/adv/r_adv)。生成(需 torch+权重,云端):<br>
+<code>python scripts/save_visualizations.py --models-dir outputs/&lt;run&gt;/models --out-dir outputs/visualizations/save_test</code></p>
+{% endif %}
+{% endblock %}

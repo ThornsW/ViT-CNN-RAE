@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "macros.html" import fmt %}
+{% block content %}
+<h1>训练 Run 一览</h1>
+
+{% if not rows %}
+  <p class="empty">没有发现任何 run。检查 <code>{{ outputs_dir }}</code> 下是否有 <code>YYYYMMDD_HHMMSS_*</code> 目录。</p>
+{% else %}
+
+<section class="cards">
+  {% for row in rows %}
+  {% set r = row.run %}
+  <a class="card" href="{{ url_for('run_detail', name=r.name) }}">
+    <div class="card-tag">{{ r.tag or r.name }}</div>
+    <div class="card-meta">
+      {% if r.model %}<span class="pill">{{ r.model }}</span>{% endif %}
+      {% if r.seed is not none %}<span class="pill">seed {{ r.seed }}</span>{% endif %}
+      {% if r.date %}<span class="muted">{{ r.date }}</span>{% endif %}
+    </div>
+    {% if row.summary %}
+    <div class="card-stats">
+      <div><b>{{ fmt(row.summary.asr, 2) }}</b><span>ASR %</span></div>
+      <div><b>{{ fmt(row.summary.adv_psnr, 2) }}</b><span>Adv PSNR</span></div>
+      <div><b>{{ fmt(row.summary.rec_psnr, 2) }}</b><span>Rec PSNR</span></div>
+    </div>
+    {% else %}
+    <div class="card-stats none">未评估（无 test.txt）</div>
+    {% endif %}
+  </a>
+  {% endfor %}
+</section>
+
+<h2>跨 Run 对比</h2>
+<div class="table-wrap">
+<table class="cmp">
+  <thead>
+    <tr>
+      <th>Run</th>
+      {% for c in cols %}<th>{{ c.label }}</th>{% endfor %}
+      <th>评估次数</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td class="run-cell"><a href="{{ url_for('run_detail', name=row.run.name) }}">{{ row.run.tag or row.run.name }}</a></td>
+      {% if row.summary %}
+        {% for c in cols %}
+          {% set v = row.summary[c.key] %}
+          <td class="{{ 'is-best' if (best.get(c.key) is not none and v is not none and v == best[c.key]) else '' }}">{{ fmt(v, c.p) }}</td>
+        {% endfor %}
+      {% else %}
+        {% for c in cols %}<td class="na">—</td>{% endfor %}
+      {% endif %}
+      <td>{{ row.n_eval }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="hint">绿色 = 该列最优。ASR / PSNR / SSIM 越高越好;L0% / L∞ 越低越好(扰动更小更稀疏)。</p>
+
+{% if show_compare %}
+<h2>Loss 叠加对比</h2>
+<p class="hint">同名 loss 跨 run 叠在一张图,看收敛速度 / 量级差异。</p>
+<img class="chart" src="{{ url_for('compare_loss') }}" alt="loss overlay comparison" loading="lazy">
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ViT-CNN-RAE 结果可视化{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="{{ url_for('index') }}">ViT-CNN-RAE · 结果可视化</a>
+    <nav>
+      <a href="{{ url_for('index') }}">Runs</a>
+      <a href="{{ url_for('gallery') }}">图库</a>
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="foot">读取自 <code>{{ outputs_dir }}</code> · 刷新页面即重新扫描</footer>
+</body>
+</html>

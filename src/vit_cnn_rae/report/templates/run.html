@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from "macros.html" import fmt %}
+{% block title %}{{ run.tag or run.name }} · ViT-CNN-RAE{% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('index') }}">← 所有 run</a></p>
+<h1>{{ run.tag or run.name }}</h1>
+<div class="card-meta">
+  {% if run.model %}<span class="pill">{{ run.model }}</span>{% endif %}
+  {% if run.seed is not none %}<span class="pill">seed {{ run.seed }}</span>{% endif %}
+  {% if run.date %}<span class="muted">{{ run.date }}</span>{% endif %}
+  <span class="muted mono">{{ run.name }}</span>
+</div>
+
+<h2>运行配置 <span class="muted">(初始超参数)</span></h2>
+{% if run_config %}
+  <div class="table-wrap">
+  <table class="metrics">
+    <tr><th>开始时间</th><td>{{ run_config.started_at or '—' }}</td>
+        <th>git commit</th><td class="mono">{{ run_config.git_commit or '—' }}</td>
+        <th>model</th><td>{{ run_config.model or '—' }}</td></tr>
+    <tr><th>dataset</th><td>{{ run_config.dataset or '—' }}</td>
+        <th>python</th><td>{{ run_config.python or '—' }}</td>
+        <th>torch</th><td>{{ run_config.torch or '—' }}{% if run_config.cuda is defined %} · cuda={{ run_config.cuda }}{% endif %}</td></tr>
+  </table>
+  </div>
+  <table class="metrics kv">
+    <thead><tr><th>超参数</th><th>值</th></tr></thead>
+    <tbody>
+    {% for k, v in run_config.params.items() %}
+      <tr><th>{{ k }}</th><td>{{ v if v is not none else '—' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="empty">该 run 没有 <code>run_config.json</code>(在加入超参数记录之前训练的)。之后用 <code>train_baseline.py</code> / <code>train_local.py</code> 跑的 run 会自动记录。</p>
+{% endif %}
+
+<h2>评估指标</h2>
+{% if summary %}
+  {% if n_eval > 1 %}<p class="hint">test.txt 有 {{ n_eval }} 次评估,下表为最后一次。</p>{% endif %}
+  <div class="table-wrap">
+  <table class="metrics">
+    <tr><th>攻击成功率 ASR</th><td>{{ fmt(summary.asr, 2, ' %') }}</td>
+        <th>干净错误率</th><td>{{ fmt(summary.clean_err, 2, ' %') }}</td>
+        <th>恢复后错误率</th><td>{{ fmt(summary.recovered_err, 2, ' %') }}</td></tr>
+    <tr><th>对抗图 PSNR</th><td>{{ fmt(summary.adv_psnr, 2, ' dB') }}</td>
+        <th>对抗图 SSIM</th><td>{{ fmt(summary.adv_ssim, 3) }}</td>
+        <th>对抗扰动 L0</th><td>{{ fmt(summary.adv_l0_pct, 1, ' %') }}</td></tr>
+    <tr><th>对抗扰动 L2</th><td>{{ fmt(summary.adv_l2, 2) }}</td>
+        <th>对抗扰动 L∞</th><td>{{ fmt(summary.adv_linf, 3) }}</td>
+        <th></th><td></td></tr>
+    <tr><th>恢复图 PSNR</th><td>{{ fmt(summary.rec_psnr, 2, ' dB') }}</td>
+        <th>恢复图 SSIM</th><td>{{ fmt(summary.rec_ssim, 3) }}</td>
+        <th>恢复残差 L0</th><td>{{ fmt(summary.rec_l0_pct, 1, ' %') }}</td></tr>
+    <tr><th>恢复残差 L2</th><td>{{ fmt(summary.rec_l2, 2) }}</td>
+        <th>恢复残差 L∞</th><td>{{ fmt(summary.rec_linf, 3) }}</td>
+        <th></th><td></td></tr>
+  </table>
+  </div>
+{% else %}
+  <p class="empty">该 run 没有 test.txt,尚未评估。先跑:<br>
+  <code>python scripts/evaluate.py --models-dir outputs/{{ run.name }}/models</code></p>
+{% endif %}
+
+{% if run.has_loss %}
+<h2>训练 Loss 曲线</h2>
+<img class="chart" src="{{ url_for('chart', name=run.name) }}" alt="loss curves" loading="lazy">
+{% endif %}
+
+<h2>原始日志</h2>
+{% if logs %}
+  {% for log in logs %}
+  <details class="log">
+    <summary>{{ log.name }} <span class="muted">({{ (log.size / 1024)|round(1) }} KB)</span></summary>
+    <pre>{{ log.text }}</pre>
+  </details>
+  {% endfor %}
+{% else %}
+  <p class="empty">该 run 目录没有 *.log 文件。</p>
+{% endif %}
+{% endblock %}
