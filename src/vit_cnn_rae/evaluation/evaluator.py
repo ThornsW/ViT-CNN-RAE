@@ -28,6 +28,7 @@ def evaluate(target_name: str = 'densenet121',
              models_dir: Path | None = None,
              local: bool = False,
              top_k_ratio: float = 0.2,
+             bg_weight: float = 0.0,
              attn_model: str = 'vit_base_patch16_224') -> dict:
     """Load G/R/target, run val set, print and return metric summary.
 
@@ -46,9 +47,10 @@ def evaluate(target_name: str = 'densenet121',
 
         def _mask_fn(x):
             att = _attn.get_attention_map(normalize_for_vit(x))
-            return make_topk_mask(att, top_k_ratio=top_k_ratio, out_size=x.shape[-1])
+            return make_topk_mask(att, top_k_ratio=top_k_ratio,
+                                  out_size=x.shape[-1], bg_weight=bg_weight)
 
-        netG = MaskedGenerator(Generator(image_nc, image_nc), _mask_fn).to(device)
+        netG = MaskedGenerator(Generator(image_nc, image_nc), _mask_fn, cache=False).to(device)
     else:
         netG = Generator(image_nc, image_nc).to(device)
     netG.load_state_dict(torch.load(models_dir / g_ckpt, map_location=device))

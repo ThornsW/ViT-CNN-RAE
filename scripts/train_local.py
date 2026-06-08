@@ -1,7 +1,7 @@
 """Train the attention-guided LOCAL variant.
 
-    DATA_ROOT=~/data python scripts/train_local.py --top-k 0.2
-    python scripts/train_local.py --seed 123 --top-k 0.1
+    python scripts/train_local.py --top-k 0.2
+    python scripts/train_local.py --top-k 0.2 --bg-weight 0.3   # 软 mask
     python scripts/train_local.py --resume outputs/<run>/models/last.pth
 """
 from __future__ import annotations
@@ -27,6 +27,8 @@ def parse_args():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--top-k', type=float, default=0.2)
+    p.add_argument('--bg-weight', type=float, default=0.0,
+                   help='非 top-k(背景)区域的扰动权重: 0=硬mask, 0<a<1=软mask, 1=全图')
     p.add_argument('--attn-model', default='vit_base_patch16_224')
     p.add_argument('--target', default='densenet121',
                    choices=['densenet121', 'resnet50', 'mobilenet_v3_large'])
@@ -43,7 +45,7 @@ def main():
     set_seed(args.seed)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(f"device={device} seed={args.seed} top_k={args.top_k}")
+    print(f"device={device} seed={args.seed} top_k={args.top_k} bg_weight={args.bg_weight}")
 
     target = load_target_model(args.target, device=device)
     train_data = MyDataset(txt=config.split_path('dataset-trn.txt'),
@@ -54,13 +56,14 @@ def main():
     if args.resume:
         models_dir = args.resume.resolve().parent  # 续训:产物写回原 run 目录,不新建
     else:
-        models_dir = config.run_dir(tag=f"local_topk{args.top_k}_s{args.seed}",
-                                    model="srae_local") / "models"
+        tag = f"local_topk{args.top_k}_bg{args.bg_weight}_s{args.seed}"
+        models_dir = config.run_dir(tag=tag, model="srae_local") / "models"
     print(f"output: {models_dir.parent}")
 
     attacker = LocalAttack(device, target, config.NUM_CLASSES, config.IMAGE_CHANNELS,
                            box_min=0, box_max=1, clip=1,
-                           top_k_ratio=args.top_k, attn_model_name=args.attn_model,
+                           top_k_ratio=args.top_k, bg_weight=args.bg_weight,
+                           attn_model_name=args.attn_model,
                            models_path=models_dir)
     if args.resume:
         attacker.load_checkpoint(args.resume)

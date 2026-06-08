@@ -18,13 +18,18 @@ def normalize_for_vit(x: torch.Tensor) -> torch.Tensor:
 def make_topk_mask(attention_map: torch.Tensor,
                    top_k_ratio: float = 0.2,
                    out_size: int = 224,
-                   mode: str = 'nearest') -> torch.Tensor:
-    """Binary mask marking the top-k patches by attention.
+                   mode: str = 'nearest',
+                   bg_weight: float = 0.0) -> torch.Tensor:
+    """Attention mask: top-k patches get weight 1, background gets `bg_weight`.
 
     attention_map : (B, H, W), e.g. (B, 14, 14)
-    top_k_ratio   : fraction of patches kept (1.0 = whole image, 0.2 = top 20%)
+    top_k_ratio   : fraction of patches set to weight 1.0 (0.2 = top 20%)
     out_size      : target spatial size, typically 224
     mode          : 'nearest' (hard patch boundaries) or 'bilinear' (soft)
+    bg_weight     : weight for the NON-top-k (background) patches.
+                    0.0    -> hard mask  (perturb only top-k);
+                    0<a<1  -> soft mask  (background gets a fraction of perturbation);
+                    1.0    -> whole-image (degenerates to the global baseline).
 
     Returns: (B, 1, out_size, out_size).
     """
@@ -32,7 +37,7 @@ def make_topk_mask(attention_map: torch.Tensor,
     flat = attention_map.flatten(1)
     k = max(1, int(round(flat.shape[-1] * top_k_ratio)))
     _, idx = flat.topk(k, dim=-1)
-    mask_flat = torch.zeros_like(flat)
+    mask_flat = torch.full_like(flat, float(bg_weight))
     mask_flat.scatter_(-1, idx, 1.0)
     mask = mask_flat.view(B, 1, H, W)
     if out_size != H:
