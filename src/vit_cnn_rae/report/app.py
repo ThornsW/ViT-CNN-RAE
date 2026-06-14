@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flask import Flask, Response, abort, render_template, request, send_file
+from flask import Flask, Response, abort, jsonify, render_template, request, send_file
 
 from .. import config
 from . import charts, parse
@@ -68,7 +68,23 @@ def create_app(outputs_dir: Path | None = None) -> Flask:
         return render_template(
             "run.html", run=r, summary=summary, n_eval=len(metrics),
             logs=logs, run_config=parse.parse_run_config(r.path),
+            description=parse.read_description(r.path),
         )
+
+    @app.route("/run/<name>/description", methods=["POST"])
+    def save_description(name: str):
+        # get_run only matches discovered run dirs, so `name` can't traverse out.
+        r = parse.get_run(name, outputs_dir)
+        if r is None:
+            abort(404)
+        text = request.form.get("text")
+        if text is None and request.is_json:
+            text = (request.get_json(silent=True) or {}).get("text")
+        text = text or ""
+        if len(text.encode("utf-8")) > 64 * 1024:  # personal note, not a log dump
+            abort(413)
+        parse.write_description(r.path, text)
+        return jsonify(ok=True)
 
     @app.route("/chart/<name>")
     def chart(name: str):

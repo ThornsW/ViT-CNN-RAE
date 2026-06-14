@@ -71,3 +71,11 @@ details.more .gallery{margin:.6rem 0}
 .empty,.hint{color:var(--muted);font-size:.9rem}
 .empty{background:#fff;border:1px dashed var(--line);border-radius:8px;padding:.9rem}
 .crumb{margin:.2rem 0 .6rem}
+
+.desc{max-width:760px}
+.desc-box{width:100%;min-height:90px;resize:vertical;font:inherit;font-size:.92rem;line-height:1.5;
+  color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:.7rem .8rem}
+.desc-box:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.desc-status{min-height:1.1em;margin-top:.35rem;font-size:.8rem;color:var(--muted)}
+.desc-status.ok{color:var(--best-ink)}
+.desc-status.err{color:#b91c1c}

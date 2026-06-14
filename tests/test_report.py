@@ -1,6 +1,8 @@
-"""CPU-only smoke tests for the report parsing layer (no torch, no flask).
+"""CPU-only smoke tests for the report layer (no torch).
 
-Relies on the two run dirs already present under outputs/.
+Parse-layer tests rely on the run dirs already present under outputs/; the
+description tests also drive the Flask routes via a test client (flask is a
+report dependency, so no torch is pulled in).
 """
 from pathlib import Path
 
@@ -74,3 +76,43 @@ def test_global_images_are_outputs_relative():
     imgs = parse.find_global_images(OUTPUTS)
     # attention_viz holds PNGs; paths come back relative to outputs/
     assert any(p.startswith("attention_viz/") for p in imgs["attention"])
+
+
+def test_description_absent_returns_empty():
+    assert parse.read_description(OUTPUTS / BASELINE) == ""
+
+
+def test_description_roundtrip(tmp_path):
+    parse.write_description(tmp_path, "测 top-k=0.1 在 ViT 注意力下的 PSNR")
+    assert parse.read_description(tmp_path) == "测 top-k=0.1 在 ViT 注意力下的 PSNR"
+    # blank text clears the sidecar entirely
+    parse.write_description(tmp_path, "   ")
+    assert parse.read_description(tmp_path) == ""
+    assert not (tmp_path / "description.txt").exists()
+
+
+def _demo_run(outputs_dir: Path) -> Path:
+    run = outputs_dir / "20260101_000000_srae_demo_s1"
+    (run / "models").mkdir(parents=True)
+    return run
+
+
+def test_description_route_persists_and_renders(tmp_path):
+    from vit_cnn_rae.report.app import create_app
+    run = _demo_run(tmp_path)
+    client = create_app(tmp_path).test_client()
+
+    res = client.post(f"/run/{run.name}/description", data={"text": "记录：测试 X"})
+    assert res.status_code == 200 and res.get_json()["ok"] is True
+    assert (run / "description.txt").read_text(encoding="utf-8") == "记录：测试 X"
+
+    # the saved note shows up when the run page is rendered
+    page = client.get(f"/run/{run.name}")
+    assert "记录：测试 X" in page.get_data(as_text=True)
+
+
+def test_description_route_unknown_run_404(tmp_path):
+    from vit_cnn_rae.report.app import create_app
+    client = create_app(tmp_path).test_client()
+    res = client.post("/run/does_not_exist/description", data={"text": "x"})
+    assert res.status_code == 404

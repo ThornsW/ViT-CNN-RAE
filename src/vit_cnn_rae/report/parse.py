@@ -192,3 +192,23 @@ def parse_run_config(run_path: Path) -> dict | None:
         return json.loads(f.read_text(encoding="utf-8"))
     except (ValueError, OSError):
         return None
+
+
+def read_description(run_path: Path) -> str:
+    """User-edited free-text note for a run (description.txt sidecar); '' if none."""
+    f = Path(run_path) / "description.txt"
+    if not f.is_file():
+        return ""
+    try:
+        return f.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def write_description(run_path: Path, text: str) -> None:
+    """Persist a run's description; blank text removes the sidecar file."""
+    f = Path(run_path) / "description.txt"
+    if text.strip():
+        f.write_text(text, encoding="utf-8")
+    else:
+        f.unlink(missing_ok=True)

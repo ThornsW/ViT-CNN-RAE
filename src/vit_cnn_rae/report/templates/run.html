@@ -11,6 +11,14 @@
   <span class="muted mono">{{ run.name }}</span>
 </div>
 
+<h2>描述 <span class="muted">(本次 run 测什么 · 自动保存)</span></h2>
+<div class="desc">
+  <textarea id="desc-box" class="desc-box"
+            data-url="{{ url_for('save_description', name=run.name) }}"
+            placeholder="记录本次 run 的目的、变量、预期结论…（输入后自动保存）">{{ description }}</textarea>
+  <div class="desc-status" id="desc-status"></div>
+</div>
+
 <h2>运行配置 <span class="muted">(初始超参数)</span></h2>
 {% if run_config %}
   <div class="table-wrap">
@@ -78,4 +86,43 @@
 {% else %}
   <p class="empty">该 run 目录没有 *.log 文件。</p>
 {% endif %}
+
+<script>
+(function () {
+  const box = document.getElementById("desc-box");
+  if (!box) return;
+  const status = document.getElementById("desc-status");
+  const url = box.dataset.url;
+  let timer = null, lastSaved = box.value;
+
+  function setStatus(text, cls) {
+    status.textContent = text;
+    status.className = "desc-status" + (cls ? " " + cls : "");
+  }
+  async function save() {
+    const text = box.value;
+    if (text === lastSaved) return;
+    setStatus("保存中…");
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        body: new URLSearchParams({ text }),
+      });
+      if (!res.ok) throw new Error(res.status);
+      lastSaved = text;
+      setStatus("已保存 ✓ " + new Date().toLocaleTimeString(), "ok");
+    } catch (e) {
+      setStatus("保存失败，请重试", "err");
+    }
+  }
+  box.addEventListener("input", function () {
+    clearTimeout(timer);
+    timer = setTimeout(save, 800);
+  });
+  box.addEventListener("blur", function () {
+    clearTimeout(timer);
+    save();
+  });
+})();
+</script>
 {% endblock %}
