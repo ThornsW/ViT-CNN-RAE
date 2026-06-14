@@ -1,7 +1,7 @@
 """Train the attention-guided LOCAL variant.
 
     python scripts/train_local.py --top-k 0.2
-    python scripts/train_local.py --top-k 0.2 --bg-weight 0.3   # 软 mask
+    python scripts/train_local.py --top-k 0.2 --bg-weight 0.3 --eps 0.062745098   # 16/255
     python scripts/train_local.py --resume outputs/<run>/models/last.pth
 """
 from __future__ import annotations
@@ -29,6 +29,8 @@ def parse_args():
     p.add_argument('--top-k', type=float, default=0.2)
     p.add_argument('--bg-weight', type=float, default=0.0,
                    help='非 top-k(背景)区域的扰动权重: 0=硬mask, 0<a<1=软mask, 1=全图')
+    p.add_argument('--eps', type=float, default=1.0,
+                   help='L∞扰动上限,图像范围为[0,1];16/255≈0.062745')
     p.add_argument('--attn-model', default='vit_base_patch16_224')
     p.add_argument('--target', default='densenet121',
                    choices=['densenet121', 'resnet50', 'mobilenet_v3_large'])
@@ -45,7 +47,8 @@ def main():
     set_seed(args.seed)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(f"device={device} seed={args.seed} top_k={args.top_k} bg_weight={args.bg_weight}")
+    print(f"device={device} seed={args.seed} top_k={args.top_k} "
+          f"bg_weight={args.bg_weight} eps={args.eps}")
 
     target = load_target_model(args.target, device=device)
     train_data = MyDataset(txt=config.split_path('dataset-trn.txt'),
@@ -56,14 +59,14 @@ def main():
     if args.resume:
         models_dir = args.resume.resolve().parent  # 续训:产物写回原 run 目录,不新建
     else:
-        tag = f"local_topk{args.top_k}_bg{args.bg_weight}_s{args.seed}"
+        tag = f"local_topk{args.top_k}_bg{args.bg_weight}_eps{args.eps}_s{args.seed}"
         models_dir = config.run_dir(tag=tag, model="srae_local") / "models"
     print(f"output: {models_dir.parent}")
     if not args.resume:
         config.save_run_config(models_dir.parent, vars(args), model="srae_local")
 
     attacker = LocalAttack(device, target, config.NUM_CLASSES, config.IMAGE_CHANNELS,
-                           box_min=0, box_max=1, clip=1,
+                           box_min=0, box_max=1, clip=args.eps,
                            top_k_ratio=args.top_k, bg_weight=args.bg_weight,
                            attn_model_name=args.attn_model,
                            models_path=models_dir)

@@ -25,10 +25,12 @@ class MaskedGenerator(nn.Module):
     float16 to save memory. Pass cache=False to disable (e.g. for evaluation).
     """
 
-    def __init__(self, inner: nn.Module, mask_fn, cache: bool = True):
+    def __init__(self, inner: nn.Module, mask_fn, cache: bool = True,
+                 perturb_clip: float | None = None):
         super().__init__()
         self.inner = inner
         self._mask_fn = mask_fn
+        self.perturb_clip = perturb_clip
         self._cache: dict | None = {} if cache else None
 
     @torch.no_grad()
@@ -45,6 +47,8 @@ class MaskedGenerator(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         pert = self.inner(x)
+        if self.perturb_clip is not None:
+            pert = torch.clamp(pert, -self.perturb_clip, self.perturb_clip)
         mask = self._masks_for(x).to(pert.dtype).to(pert.device)
         return pert * mask
 
@@ -72,6 +76,6 @@ class LocalAttack(Attack):
             return make_topk_mask(att, top_k_ratio=self.top_k_ratio,
                                   out_size=x.shape[-1], bg_weight=self.bg_weight)
 
-        self.netG = MaskedGenerator(self.netG, mask_fn).to(device)
+        self.netG = MaskedGenerator(self.netG, mask_fn, perturb_clip=clip).to(device)
         # Parent captured the OLD netG.parameters(); re-bind.
         self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=1e-3)

@@ -50,7 +50,8 @@ def evaluate(target_name: str = 'densenet121',
             return make_topk_mask(att, top_k_ratio=top_k_ratio,
                                   out_size=x.shape[-1], bg_weight=bg_weight)
 
-        netG = MaskedGenerator(Generator(image_nc, image_nc), _mask_fn, cache=False).to(device)
+        netG = MaskedGenerator(Generator(image_nc, image_nc), _mask_fn,
+                               cache=False, perturb_clip=clip).to(device)
     else:
         netG = Generator(image_nc, image_nc).to(device)
     netG.load_state_dict(torch.load(models_dir / g_ckpt, map_location=device))

@@ -25,6 +25,8 @@ def parse_args():
                    help='evaluate a LocalAttack run (apply ViT top-k mask to G)')
     p.add_argument('--top-k', type=float, default=0.2)
     p.add_argument('--bg-weight', type=float, default=0.0)
+    p.add_argument('--eps', type=float, default=1.0,
+                   help='L∞扰动上限,应和训练时 --eps 一致;16/255≈0.062745')
     p.add_argument('--attn-model', default='vit_base_patch16_224')
     return p.parse_args()
 
@@ -35,6 +37,7 @@ def main():
              g_ckpt=args.g,
              r_ckpt=args.r,
              batch_size=args.batch_size,
+             clip=args.eps,
              models_dir=args.models_dir,
              local=args.local,
              top_k_ratio=args.top_k,
