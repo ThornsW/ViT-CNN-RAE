@@ -44,7 +44,7 @@ def parse_args():
 def main():
     os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
     args = parse_args()
-    set_seed(args.seed)
+    set_seed(args.seed, deterministic=False)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"device={device} seed={args.seed} top_k={args.top_k} "
@@ -54,7 +54,7 @@ def main():
     train_data = MyDataset(txt=config.split_path('dataset-trn.txt'),
                            root=config.DATA_ROOT, transform=default_transform)
     loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True,
-                        pin_memory=torch.cuda.is_available(), num_workers=1)
+                        pin_memory=torch.cuda.is_available(), num_workers=4)
 
     if args.resume:
         models_dir = args.resume.resolve().parent  # 续训:产物写回原 run 目录,不新建
