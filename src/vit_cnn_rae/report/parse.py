@@ -170,6 +170,56 @@ def find_global_images(outputs_dir: Path | None = None) -> dict[str, list[str]]:
     }
 
 
+def find_run_images(run_path: Path, outputs_dir: Path | None = None,
+                    limit: int = 24) -> list[dict]:
+    """Per-run exemplars from <run>/viz/ (written by save_visualizations --out-dir).
+
+    Groups the sub-galleries by sample index so each exemplar carries the matched
+    ori / adv / recovered / perturbation(×10) images plus the predicted-vs-true
+    labels parsed from the filenames. Paths are relative to outputs/ (for /file).
+    Empty list when the run has no viz/ dir.
+    """
+    outputs_dir = Path(outputs_dir) if outputs_dir else config.OUTPUT_DIR
+    viz = Path(run_path) / "viz"
+    if not viz.is_dir():
+        return []
+
+    def _by_count(sub: str) -> dict[int, Path]:
+        out: dict[int, Path] = {}
+        for p in (viz / sub).glob("*.png"):
+            m = re.match(r"^(\d+)_", p.name)
+            if m:
+                out[int(m.group(1))] = p
+        return out
+
+    imgs, advs = _by_count("img"), _by_count("adv")
+    radvs, perts = _by_count("r_adv"), _by_count("pert5")
+
+    exemplars: list[dict] = []
+    for c in sorted(imgs)[:limit]:
+        adv_p, radv_p = advs.get(c), radvs.get(c)
+        adv_pred = adv_true = r_pred = None
+        if adv_p:
+            m = re.match(r"^\d+_(\d+)_(\d+)_", adv_p.name)
+            if m:
+                adv_pred, adv_true = int(m.group(1)), int(m.group(2))
+        if radv_p:
+            m = re.match(r"^\d+_\d+_\d+_(\d+)_", radv_p.name)
+            if m:
+                r_pred = int(m.group(1))
+        exemplars.append({
+            "idx": c,
+            "ori": _rel(imgs[c], outputs_dir),
+            "adv": _rel(adv_p, outputs_dir) if adv_p else None,
+            "r_adv": _rel(radv_p, outputs_dir) if radv_p else None,
+            "pert": _rel(perts[c], outputs_dir) if c in perts else None,
+            "adv_pred": adv_pred, "adv_true": adv_true, "r_pred": r_pred,
+            "attacked": adv_pred is not None and adv_true is not None and adv_pred != adv_true,
+            "recovered": r_pred is not None and adv_true is not None and r_pred == adv_true,
+        })
+    return exemplars
+
+
 def find_logs(run_path: Path) -> list[Path]:
     return sorted(Path(run_path).glob("*.log"))
 

@@ -22,8 +22,21 @@ def save_visualizations(target_name: str = 'densenet121',
                         batch_size: int = 30,
                         clip: float = 1.0,
                         models_dir: Path | None = None,
-                        out_dir: Path | None = None) -> Path:
-    """Iterate val set, save 9 images per sample to <out_dir>/save_test/."""
+                        out_dir: Path | None = None,
+                        local: bool = False,
+                        top_k_ratio: float = 0.2,
+                        bg_weight: float = 0.0,
+                        attn_model: str = 'vit_base_patch16_224',
+                        limit: int | None = None) -> Path:
+    """Iterate val set, save 9 images per sample to <out_dir>/save_test/.
+
+    local=True mirrors evaluator's LocalAttack path: G is wrapped in
+    MaskedGenerator so the perturbation is gated by the same ViT top-k attention
+    mask used in training (needs timm + the attn_model weights). For local runs
+    `clip` MUST match the run's training eps, otherwise the adv images won't match
+    what evaluation measured. `limit` caps how many samples are written (None =
+    whole val set) — handy for a quick exemplar gallery instead of all 2570.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     models_dir = Path(models_dir) if models_dir else config.MODELS_OUT
     out_dir = Path(out_dir) if out_dir else config.VIZ_OUT / 'save_test'
@@ -33,7 +46,20 @@ def save_visualizations(target_name: str = 'densenet121',
     for sub in _SUBDIRS:
         (out_dir / sub).mkdir(parents=True, exist_ok=True)
 
-    netG = Generator(image_nc, image_nc).to(device)
+    if local:
+        from ..attacks.local import MaskedGenerator
+        from ..attention import ViTAttentionExtractor, make_topk_mask, normalize_for_vit
+        _attn = ViTAttentionExtractor(model_name=attn_model, pretrained=True, device=device)
+
+        def _mask_fn(x):
+            att = _attn.get_attention_map(normalize_for_vit(x))
+            return make_topk_mask(att, top_k_ratio=top_k_ratio,
+                                  out_size=x.shape[-1], bg_weight=bg_weight)
+
+        netG = MaskedGenerator(Generator(image_nc, image_nc), _mask_fn,
+                               cache=False, perturb_clip=clip).to(device)
+    else:
+        netG = Generator(image_nc, image_nc).to(device)
     netG.load_state_dict(torch.load(models_dir / g_ckpt, map_location=device))
     netG.eval()
 
@@ -93,5 +119,9 @@ def save_visualizations(target_name: str = 'densenet121',
                 diff5.save(out_dir / 'diff5' / f'{count}_diff5_.png')
 
                 count += 1
+                if limit is not None and count >= limit:
+                    break
+            if limit is not None and count >= limit:
+                break
 
     return out_dir

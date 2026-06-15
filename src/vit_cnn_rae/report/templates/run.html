@@ -70,6 +70,51 @@
   <code>python scripts/evaluate.py --models-dir outputs/{{ run.name }}/models</code></p>
 {% endif %}
 
+{% if run_images %}
+<h2>对抗效果图 <span class="muted">(前 {{ run_images|length }} 张样本 · 原图 → 对抗图 → 恢复图 · 末列扰动×10;点图看大图)</span></h2>
+<div class="exemplars">
+  {% for ex in run_images %}
+  <div class="ex-row">
+    <figure class="ex-cell">
+      <a href="{{ url_for('serve_file', path=ex.ori) }}" target="_blank" rel="noopener">
+        <img src="{{ url_for('serve_file', path=ex.ori) }}" loading="lazy" alt="ori {{ ex.idx }}"></a>
+      <figcaption>原图 <span class="muted">#{{ ex.idx }}</span></figcaption>
+    </figure>
+    <span class="ex-arrow">→</span>
+    <figure class="ex-cell">
+      {% if ex.adv %}
+      <a href="{{ url_for('serve_file', path=ex.adv) }}" target="_blank" rel="noopener">
+        <img src="{{ url_for('serve_file', path=ex.adv) }}" loading="lazy" alt="adv {{ ex.idx }}"></a>
+      <figcaption>对抗图
+        {% if ex.attacked %}<span class="tag-bad">骗过 {{ ex.adv_pred }}≠{{ ex.adv_true }}</span>
+        {% elif ex.adv_pred is not none %}<span class="tag-ok">仍对 {{ ex.adv_pred }}</span>{% endif %}
+      </figcaption>
+      {% endif %}
+    </figure>
+    <span class="ex-arrow">→</span>
+    <figure class="ex-cell">
+      {% if ex.r_adv %}
+      <a href="{{ url_for('serve_file', path=ex.r_adv) }}" target="_blank" rel="noopener">
+        <img src="{{ url_for('serve_file', path=ex.r_adv) }}" loading="lazy" alt="recovered {{ ex.idx }}"></a>
+      <figcaption>恢复图
+        {% if ex.recovered %}<span class="tag-ok">恢复对 {{ ex.r_pred }}</span>
+        {% elif ex.r_pred is not none %}<span class="tag-bad">未恢复 {{ ex.r_pred }}</span>{% endif %}
+      </figcaption>
+      {% endif %}
+    </figure>
+    <span class="ex-arrow">·</span>
+    <figure class="ex-cell">
+      {% if ex.pert %}
+      <a href="{{ url_for('serve_file', path=ex.pert) }}" target="_blank" rel="noopener">
+        <img src="{{ url_for('serve_file', path=ex.pert) }}" loading="lazy" alt="perturbation {{ ex.idx }}"></a>
+      <figcaption>扰动 ×10</figcaption>
+      {% endif %}
+    </figure>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% if run.has_loss %}
 <h2>训练 Loss 曲线</h2>
 <img class="chart" src="{{ url_for('chart', name=run.name) }}" alt="loss curves" loading="lazy">

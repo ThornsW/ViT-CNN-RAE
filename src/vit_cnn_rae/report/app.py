@@ -69,6 +69,7 @@ def create_app(outputs_dir: Path | None = None) -> Flask:
             "run.html", run=r, summary=summary, n_eval=len(metrics),
             logs=logs, run_config=parse.parse_run_config(r.path),
             description=parse.read_description(r.path),
+            run_images=parse.find_run_images(r.path, outputs_dir),
         )
 
     @app.route("/run/<name>/description", methods=["POST"])
