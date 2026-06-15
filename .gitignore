@@ -8,8 +8,9 @@ __pycache__/
 build/
 dist/
 
-# Datasets: ignore raw images only (data/splits/<dataset>/ stays tracked)
+# Datasets: ignore raw images + tarball only (data/splits/<dataset>/ stays tracked)
 **/256_ObjectCategories/
+**/256_ObjectCategories.tar
 
 # Training outputs (regenerate via training)
 outputs/
@@ -38,7 +39,7 @@ runs/
 # Notebooks checkpoints
 .ipynb_checkpoints/
 
-# Claude Code project context (kept local)
+AGENTS.md
 CLAUDE.md
 
 # 可视化理解
