@@ -50,7 +50,7 @@ outputs/<YYYYMMDD_HHMMSS_model_tag>/   # 时间戳隔离 (gitignored)
 2. `MaskedGenerator(nn.Module)` 包装 Generator,让 perturbation = inner(x) * mask
 3. mask 由 `attention/extractor.py` 提供,从 `x`(clean)计算,作为密钥
 4. timm >= 0.9 默认 `attn.fused_attn=True` 走 SDPA 跳过 attn_drop hook → `ViTAttentionExtractor` 强制设 False
-5. 数据集路径列表里前缀是 `/caltech256/...`,`DATA_ROOT` 设为父目录(默认 `~/data`)
+5. 数据集路径列表里前缀是 `/caltech256/...`,`DATA_ROOT` 设为父目录(默认 `<repo>/data`，数据放项目内 data/）
 6. 所有路径走 `config.py` 不再硬编码,通过 env 覆盖:`DATA_ROOT` / `CHECKPOINT_DIR` / `OUTPUT_DIR`
 7. **训练产物按时间戳目录隔离**:`outputs/<YYYYMMDD_HHMMSS_model_tag>/models/`,scripts 调 `config.run_dir(tag)` 生成
 8. **极简至上**(v0.4):research 项目不需要 runner 编排层 / TensorBoard / sha256 / 6 个调试旗标。只有 `--seed` + `--resume` 真正需要
@@ -73,7 +73,6 @@ outputs/<YYYYMMDD_HHMMSS_model_tag>/   # 时间戳隔离 (gitignored)
 
 # 云端训练
 bash scripts/setup_autodl.sh
-export DATA_ROOT=~/data
 python scripts/train_baseline.py                                  # 单 seed=42, 150 ep
 python scripts/train_local.py --top-k 0.2                         # 同
 python scripts/evaluate.py --models-dir outputs/<run_dir>/models
