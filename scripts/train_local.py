@@ -38,6 +38,11 @@ def parse_args():
     p.add_argument('--batch-size', type=int, default=22)
     p.add_argument('--seed', type=int, default=42)
     p.add_argument('--resume', type=Path, default=None)
+    p.add_argument('--trn-split', default='dataset-trn.txt',
+                   help='训练 split 文件名;轻量扫参用 dataset-trn-n30.txt')
+    p.add_argument('--lr-drops', type=int, nargs=2, default=[50, 100],
+                   metavar=('E1', 'E2'),
+                   help='lr 从 1e-3 降到 1e-4/1e-5 的两个 epoch;轻量: 20 40')
     return p.parse_args()
 
 
@@ -51,7 +56,7 @@ def main():
           f"bg_weight={args.bg_weight} eps={args.eps}")
 
     target = load_target_model(args.target, device=device)
-    train_data = MyDataset(txt=config.split_path('dataset-trn.txt'),
+    train_data = MyDataset(txt=config.split_path(args.trn_split),
                            root=config.DATA_ROOT, transform=default_transform)
     loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True,
                         pin_memory=torch.cuda.is_available(), num_workers=4)
@@ -73,7 +78,7 @@ def main():
     if args.resume:
         attacker.load_checkpoint(args.resume)
 
-    attacker.train(loader, args.epochs)
+    attacker.train(loader, args.epochs, lr_drops=args.lr_drops)
 
 
 if __name__ == '__main__':

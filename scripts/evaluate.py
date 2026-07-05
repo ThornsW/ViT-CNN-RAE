@@ -15,19 +15,21 @@ from vit_cnn_rae.evaluation import evaluate
 
 def parse_args():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--target', default='densenet121')
+    p.add_argument('--target', default=None)
     p.add_argument('--g', default='netG_epoch_150_1.pth')
     p.add_argument('--r', default='netR_epoch_150_1.pth')
     p.add_argument('--batch-size', type=int, default=32)
     p.add_argument('--models-dir', type=Path, default=None,
-                   help='directory with the G and R checkpoints (default: outputs/models)')
-    p.add_argument('--local', action='store_true',
-                   help='evaluate a LocalAttack run (apply ViT top-k mask to G)')
-    p.add_argument('--top-k', type=float, default=0.2)
-    p.add_argument('--bg-weight', type=float, default=0.0)
-    p.add_argument('--eps', type=float, default=1.0,
-                   help='L∞扰动上限,应和训练时 --eps 一致;16/255≈0.062745')
-    p.add_argument('--attn-model', default='vit_base_patch16_224')
+                   help='G/R checkpoint 目录(默认 outputs/models);其余参数默认从上级 run_config.json 读')
+    p.add_argument('--local', action=argparse.BooleanOptionalAction, default=None,
+                   help='是否 LocalAttack run;默认从 run_config 的 model 字段自动判断')
+    p.add_argument('--top-k', type=float, default=None)
+    p.add_argument('--bg-weight', type=float, default=None)
+    p.add_argument('--eps', type=float, default=None,
+                   help='L∞扰动上限;默认从 run_config 读,显式传参覆盖')
+    p.add_argument('--attn-model', default=None)
+    p.add_argument('--gated-recovery', action='store_true',
+                   help='恢复时 R 输出乘 mask;同时报告密钥门控(clean 算 mask)与自恢复(adv 算 mask)')
     return p.parse_args()
 
 
@@ -42,7 +44,8 @@ def main():
              local=args.local,
              top_k_ratio=args.top_k,
              bg_weight=args.bg_weight,
-             attn_model=args.attn_model)
+             attn_model=args.attn_model,
+             gated_recovery=args.gated_recovery)
 
 
 if __name__ == '__main__':

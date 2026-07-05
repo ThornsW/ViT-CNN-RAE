@@ -38,6 +38,37 @@ _TRAIN_BUILDERS = {
 }
 
 
+_TIMM_TARGETS = {
+    'vit_base_patch16_224': 'ViT_B16.pth',
+    'deit3_small_patch16_224': 'DeiT3_S16.pth',
+    'swin_tiny_patch4_window7_224': 'Swin_T.pth',
+}
+
+
+def _build_trainable(name: str, num_classes: int):
+    """Build a classifier with a frozen backbone and a trainable head.
+
+    Returns (model, default_ckpt_name). Supports torchvision CNNs and timm ViTs.
+    """
+    if name in _TRAIN_BUILDERS:
+        spec = _TRAIN_BUILDERS[name]
+        model = spec['ctor']()
+        for param in model.parameters():
+            param.requires_grad = False
+        spec['replace'](model, num_classes)
+        return model, spec['default_ckpt']
+    if name in _TIMM_TARGETS:
+        import timm
+        model = timm.create_model(name, pretrained=True, num_classes=num_classes)
+        for param in model.parameters():
+            param.requires_grad = False
+        for param in model.get_classifier().parameters():
+            param.requires_grad = True
+        return model, _TIMM_TARGETS[name]
+    raise ValueError(f"unknown classifier: {name}. "
+                     f"torchvision {list(_TRAIN_BUILDERS)} or timm {list(_TIMM_TARGETS)}.")
+
+
 def train_classifier(name: str = 'densenet121',
                      epochs: int = 30,
                      batch_size: int = 128,
@@ -47,10 +78,8 @@ def train_classifier(name: str = 'densenet121',
 
     Returns the path to the saved .pth.
     """
-    if name not in _TRAIN_BUILDERS:
-        raise ValueError(f"unknown classifier: {name}. Choose from {list(_TRAIN_BUILDERS)}.")
-    spec = _TRAIN_BUILDERS[name]
-    out_path = Path(out_path) if out_path else config.checkpoint_path(spec['default_ckpt'])
+    model, default_ckpt = _build_trainable(name, num_classes)
+    out_path = Path(out_path) if out_path else config.checkpoint_path(default_ckpt)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -68,10 +97,6 @@ def train_classifier(name: str = 'densenet121',
     test_loader = DataLoader(test_data, batch_size=batch_size,
                              pin_memory=torch.cuda.is_available(), num_workers=4)
 
-    model = spec['ctor']()
-    for param in model.parameters():
-        param.requires_grad = False
-    spec['replace'](model, num_classes)
     model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, betas=(0.9, 0.999))

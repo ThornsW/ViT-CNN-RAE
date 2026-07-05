@@ -29,25 +29,39 @@ _BUILDERS = {
     },
 }
 
+# timm victims for the transfer matrix. deit3/swin are DELIBERATELY off-family
+# from the vit_base attention extractor so CNN->ViT transfer is not self-attack.
+_TIMM_CKPTS = {
+    'vit_base_patch16_224': 'ViT_B16.pth',
+    'deit3_small_patch16_224': 'DeiT3_S16.pth',
+    'swin_tiny_patch4_window7_224': 'Swin_T.pth',
+}
+
 
 def load_target_model(name: str = 'densenet121',
                       num_classes: int = config.NUM_CLASSES,
                       checkpoint: str | Path | None = None,
                       device: str | torch.device = 'cpu',
                       eval_mode: bool = True) -> nn.Module:
-    """Build a torchvision classifier, replace head, load weights, send to device."""
-    if name not in _BUILDERS:
-        raise ValueError(f"unknown target model: {name}. Choose from {list(_BUILDERS)}.")
-    spec = _BUILDERS[name]
+    """Build a torchvision CNN or timm ViT, load Caltech-256 weights, send to device."""
+    if name in _BUILDERS:
+        spec = _BUILDERS[name]
+        model = spec['ctor']()
+        spec['replace'](model, num_classes)
+        default_ckpt = spec['default_ckpt']
+    elif name in _TIMM_CKPTS:
+        import timm
+        model = timm.create_model(name, pretrained=False, num_classes=num_classes)
+        default_ckpt = _TIMM_CKPTS[name]
+    else:
+        raise ValueError(f"unknown target model: {name}. "
+                         f"torchvision {list(_BUILDERS)} or timm {list(_TIMM_CKPTS)}.")
 
-    model = spec['ctor']()
-    spec['replace'](model, num_classes)
-
-    ckpt_path = Path(checkpoint) if checkpoint else config.checkpoint_path(spec['default_ckpt'])
+    ckpt_path = Path(checkpoint) if checkpoint else config.checkpoint_path(default_ckpt)
     if not ckpt_path.exists():
         raise FileNotFoundError(
             f"target classifier checkpoint not found at {ckpt_path}. "
-            f"Run scripts/train_target_{name.split('_')[0]}.py to create it.")
+            f"Train it first (scripts/train_target_*.py).")
     model.load_state_dict(torch.load(ckpt_path, map_location=device))
     model.to(device)
     if eval_mode:

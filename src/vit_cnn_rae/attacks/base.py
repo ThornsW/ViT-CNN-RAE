@@ -125,12 +125,17 @@ class Attack:
         self.optimizer_D = torch.optim.Adam(self.netDisc.parameters(), lr=lr)
         self.optimizer_R = torch.optim.Adam(self.netR.parameters(), lr=lr)
 
-    def train(self, train_dataloader, epochs: int, ckpt_interval: int = 50):
-        """Main training loop. Saves last.pth every epoch + epoch_NNN.pth at intervals."""
+    def train(self, train_dataloader, epochs: int, ckpt_interval: int = 50,
+              lr_drops=(50, 100)):
+        """Main training loop. Saves last.pth every epoch + epoch_NNN.pth at intervals.
+
+        lr_drops: the two epochs at which lr steps down 1e-3 -> 1e-4 -> 1e-5.
+        Defaults keep the original schedule; a short sweep can pass e.g. (20, 40).
+        """
         for epoch in range(self.start_epoch, epochs + 1):
-            if epoch == 50:
+            if epoch == lr_drops[0]:
                 self._rebuild_optimizers(1e-4)
-            if epoch == 100:
+            if epoch == lr_drops[1]:
                 self._rebuild_optimizers(1e-5)
 
             sums = {k: 0.0 for k in self.loss_history}
