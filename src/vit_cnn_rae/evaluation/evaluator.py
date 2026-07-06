@@ -83,6 +83,12 @@ def evaluate(target_name: str | None = None,
     if not g_path.exists() and (models_dir / "last.pth").exists():
         g_path = r_path = models_dir / "last.pth"
         print(f"[eval] {g_ckpt} 不存在,回退到 last.pth")
+    # local 以 checkpoint 前缀为准(MaskedGenerator 存的 netG 有 inner. 前缀),比 run_config
+    # 的 model 字段更可靠——最早的 local run 可能缺 run_config 或字段不符。
+    g_state = _load_component(g_path, "netG", device)
+    if local != (ckpt_local := any(k.startswith("inner.") for k in g_state)):
+        print(f"[eval] local 修正: run_config={local} -> checkpoint={ckpt_local}")
+        local = ckpt_local
     if gated_recovery and not local:
         print("[eval] --gated-recovery 仅对 local run 有意义(需要 mask),已忽略")
         gated_recovery = False
@@ -106,7 +112,7 @@ def evaluate(target_name: str | None = None,
                                cache=False, perturb_clip=clip).to(device)
     else:
         netG = Generator(image_nc, image_nc).to(device)
-    netG.load_state_dict(_load_component(g_path, "netG", device))
+    netG.load_state_dict(g_state)
     netG.eval()
 
     netR = Recover(image_nc, image_nc).to(device)

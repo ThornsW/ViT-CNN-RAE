@@ -34,12 +34,17 @@ def _build_g(models_dir: Path, device, g_ckpt: str):
     """Rebuild a run's generator from its run_config (local G gets its ViT mask)."""
     cfg = _load_run_config(models_dir)
     p = cfg.get('params', {})
-    local = cfg.get('model') == 'srae_local'
     top_k = p.get('top_k', 0.2)
     eps = float(p.get('eps', 1.0))
     bg = float(p.get('bg_weight', 0.0))
     attn_model = p.get('attn_model', 'vit_base_patch16_224')
     nc = config.IMAGE_CHANNELS
+
+    gp = models_dir / g_ckpt
+    if not gp.exists() and (models_dir / 'last.pth').exists():
+        gp = models_dir / 'last.pth'
+    g_state = _load_component(gp, 'netG', device)
+    local = any(k.startswith('inner.') for k in g_state)  # checkpoint 前缀为准,不靠 run_config
 
     if local:
         attn = ViTAttentionExtractor(model_name=attn_model, pretrained=True, device=device)
@@ -51,11 +56,7 @@ def _build_g(models_dir: Path, device, g_ckpt: str):
         netG = MaskedGenerator(Generator(nc, nc), mask_fn, cache=False, perturb_clip=eps).to(device)
     else:
         netG = Generator(nc, nc).to(device)
-
-    gp = models_dir / g_ckpt
-    if not gp.exists() and (models_dir / 'last.pth').exists():
-        gp = models_dir / 'last.pth'
-    netG.load_state_dict(_load_component(gp, 'netG', device))
+    netG.load_state_dict(g_state)
     netG.eval()
     return netG, eps, local
 
